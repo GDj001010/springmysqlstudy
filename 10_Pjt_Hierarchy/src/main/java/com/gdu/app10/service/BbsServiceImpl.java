@@ -15,14 +15,14 @@ import com.gdu.app10.domain.BbsDTO;
 import com.gdu.app10.mapper.BbsMapper;
 import com.gdu.app10.util.PageUtil;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class BbsServiceImpl implements BbsService {
 	
-	private BbsMapper bbsMapper;
-	private PageUtil pageUtil;
+	private final BbsMapper bbsMapper;
+	private final PageUtil pageUtil;
 	
 	@Override
 	public void loadBbsList(HttpServletRequest request, Model model) {
@@ -38,7 +38,7 @@ public class BbsServiceImpl implements BbsService {
 		
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("begin", pageUtil.getBegin());
-		map.put("end", pageUtil.getEnd());
+		map.put("recordPerPage", recordPerPage);
 		
 		List<BbsDTO> bbsList = bbsMapper.getBbsList(map);
 		
@@ -48,7 +48,7 @@ public class BbsServiceImpl implements BbsService {
 		
 	}
 	
-	@Transactional(readOnly = true) // readOnly는 항상 붙여주자 (성능향상)	// INSERT, UPDATE,DELETE 중 2개 이상의 쿼리를 실행하는 경우 반드시 트랜잭션 추가.
+	@Transactional // readOnly는 항상 붙여주자 (성능향상)	// INSERT, UPDATE,DELETE 중 2개 이상의 쿼리를 실행하는 경우 반드시 트랜잭션 추가.
 	@Override
 	public int insertBbs(HttpServletRequest request) {
 		
@@ -66,8 +66,23 @@ public class BbsServiceImpl implements BbsService {
 		bbsDTO.setIp(ip);
 		
 		
-		// 원글 달기
-		int addResult = bbsMapper.insertBbs(bbsDTO);
+		// 원글 달기 -1
+		int addResult = bbsMapper.insertBbs(bbsDTO);	// 인수 bbsDTO의 bbsNo 필드 값은 bbs.xml의 addBbs 쿼리문이 실행되면서 채워진다.
+		// addBbs 실행을 통해서 채운 값
+		/*
+			BBS_NO : AUTO_INCREMENT
+			WRITER : #{writer}
+			TITLE : #{title}
+			IP : #{ip}
+			CREATED_AT : NOW()
+			STATE : 1
+			DEPTH : 0
+			GROUP_NO : 비어있음
+			GROUP_ORDER : 0
+		*/
+		// bbsDTO에 저장된 bbsNo값을 GROUP_NO 칼럼으로 저장해야 한다.
+		// 원글 달기 -2
+		addResult += bbsMapper.insertBbsGroupNo(bbsDTO);
 		
 		// 결과 반환
 		return addResult;
@@ -79,6 +94,7 @@ public class BbsServiceImpl implements BbsService {
 		return removeResult;
 	}
 	
+	@Transactional
 	@Override
 	public int addReply(HttpServletRequest request) {
 		
