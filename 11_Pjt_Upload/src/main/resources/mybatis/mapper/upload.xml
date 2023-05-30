@@ -12,15 +12,13 @@
 	</select>
 
 	<select id="getUploadList" parameterType="Map" resultType="UploadDTO">
-		SELECT B.RN
-		     , B.UPLOAD_NO
+		SELECT B.UPLOAD_NO
 		     , B.UPLOAD_TITLE
 		     , B.UPLOAD_CONTENT
 		     , B.CREATED_AT
 		     , B.MODIFIED_AT
 		     , B.ATTACH_COUNT
-		  FROM (SELECT ROW_NUMBER() OVER(ORDER BY UPLOAD_NO DESC) AS RN
-		             , U.UPLOAD_NO
+		  FROM (SELECT U.UPLOAD_NO
 		             , U.UPLOAD_TITLE
 		             , U.UPLOAD_CONTENT
 		             , U.CREATED_AT
@@ -29,26 +27,22 @@
 		                  FROM ATTACH A
 		                 WHERE U.UPLOAD_NO = A.UPLOAD_NO) AS ATTACH_COUNT
 		          FROM UPLOAD U) B
-		 WHERE B.RN BETWEEN #{begin} AND #{end}
+		 ORDER BY UPLOAD_NO DESC
+		 LIMIT #{begin}, #{recordPerPage}
 	</select>
 
-	<insert id="addUpload" parameterType="UploadDTO">
-		<!-- INSERT 수행 이전(BEFORE)에 addUpload 서비스가 전달한 UploadDTO의 uploadNo필드에 UPLOAD_SEQ.NEXTVAL값을 저장한다. -->
-		<selectKey order="BEFORE" resultType="int" keyProperty="uploadNo">
-			SELECT UPLOAD_SEQ.NEXTVAL
-			  FROM DUAL
-		</selectKey>
+	<insert id="addUpload" useGeneratedKeys="true" keyProperty="uploadNo" parameterType="UploadDTO">
 		INSERT INTO UPLOAD
-			(UPLOAD_NO, UPLOAD_TITLE, UPLOAD_CONTENT, CREATED_AT, MODIFIED_AT)
+			(UPLOAD_TITLE, UPLOAD_CONTENT, CREATED_AT, MODIFIED_AT)
 		VALUES
-			(#{uploadNo}, #{uploadTitle}, #{uploadContent}, SYSTIMESTAMP, SYSTIMESTAMP)
+			(#{uploadTitle}, #{uploadContent}, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
 	</insert>
 
 	<insert id="addAttach" parameterType="AttachDTO">
 		INSERT INTO ATTACH
-			(ATTACH_NO, PATH, ORIGIN_NAME, FILESYSTEM_NAME, DOWNLOAD_COUNT, HAS_THUMBNAIL, UPLOAD_NO)
+			(PATH, ORIGIN_NAME, FILESYSTEM_NAME, DOWNLOAD_COUNT, HAS_THUMBNAIL, UPLOAD_NO)
 		VALUES
-			(ATTACH_SEQ.NEXTVAL, #{path}, #{originName}, #{filesystemName}, 0, #{hasThumbnail}, #{uploadNo})
+			(#{path}, #{originName}, #{filesystemName}, 0, #{hasThumbnail}, #{uploadNo})
 	</insert>
 	
 	<select id="getUploadByNo" parameterType="int" resultType="UploadDTO">
@@ -81,18 +75,19 @@
 	</delete>
 	
 	<update id="updateUpload" parameterType="UploadDTO">
-		UPDATE UPLOAD
-		   SET UPLOAD_TITLE = #{uploadTitle},
-		   	   UPLOAD_CONTENT = #{uploadContent},
-		   	   MODIFIED_AT = SYSTIMESTAMP
-		 WHERE UPLOAD_NO = #{uploadNo}
-	</update>
+	    UPDATE UPLOAD
+	       SET UPLOAD_TITLE = #{uploadTitle}
+	         , UPLOAD_CONTENT = #{uploadContent}
+	         , MODIFIED_AT = CURRENT_TIMESTAMP()
+	     WHERE UPLOAD_NO = #{uploadNo}
+  	</update>
 	
-	<select id="getAttachListInYersterday" resultType="attachDTO">
-		SELECT ATTACH_NO, PATH, ORIGIN_NAME, FILESYSTEM_NAME, DOWNLOAD_COUNT, HAS_THUMBNAIL, UPLOAD_NO
-		  FROM ATTACH
-		 WHERE PATH LIKE '%' CONCAT('%', TO_CHAR(SYSDATE - 1, 'YYYY\\MM\\DD'))
-	</select>
+	
+	<select id="getAttachListInYersterday" resultType="AttachDTO">
+    SELECT ATTACH_NO, PATH, ORIGIN_NAME, FILESYSTEM_NAME, DOWNLOAD_COUNT, HAS_THUMBNAIL, UPLOAD_NO
+      FROM ATTACH
+     WHERE PATH LIKE CONCAT('%', DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 DAY), '%Y\\%m\\%d')
+  </select>
 	
 	
 </mapper>

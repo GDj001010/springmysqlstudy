@@ -35,17 +35,17 @@ import com.gdu.app11.mapper.UploadMapper;
 import com.gdu.app11.util.MyFileUtil;
 import com.gdu.app11.util.PageUtil;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
 
 @Service
-@AllArgsConstructor  // field @Autowired 처리
+@RequiredArgsConstructor
 public class UploadServiceImpl implements UploadService {
 
 	// field
-	private UploadMapper uploadMapper;
-	private MyFileUtil myFileUtil;
-	private PageUtil pageUtil;
+	private final UploadMapper uploadMapper;
+	private final MyFileUtil myFileUtil;
+	private final PageUtil pageUtil;
 	
 	// 권장사항 : Pagination 처리 해 보기
 	@Override
@@ -62,7 +62,7 @@ public class UploadServiceImpl implements UploadService {
 		
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("begin", pageUtil.getBegin());
-		map.put("end", pageUtil.getEnd());
+		map.put("recordPerPage", recordPerPage);
 		
 		List<UploadDTO> uploadList = uploadMapper.getUploadList(map);
 		model.addAttribute("uploadList", uploadList);
@@ -71,7 +71,7 @@ public class UploadServiceImpl implements UploadService {
 	}
 	
 	
-	@Transactional(readOnly = true)  // INSERT문을 2개 이상 수행하기 때문에 트랜잭션 처리가 필요하다.
+	@Transactional
 	@Override
 	public int addUpload(MultipartHttpServletRequest multipartRequest) {
 		
@@ -388,7 +388,7 @@ public class UploadServiceImpl implements UploadService {
 	}
 	
 	
-	@Transactional(readOnly = true)
+	@Transactional
 	@Override
 	public int updateUpload(MultipartHttpServletRequest multipartRequest) {
 		
